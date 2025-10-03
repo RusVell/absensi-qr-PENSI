@@ -178,23 +178,33 @@
       }
     }
     
-    function startScanner(deviceId) {
-      const constraints = {
-        facingMode: "environment" 
-      };
-      if (deviceId) {
-        constraints.deviceId = { exact: deviceId };
-      }
+   function startScanner(deviceId) {
+  let constraints = { facingMode: "environment" };
 
-      html5QrCode.start(
-        constraints,
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        onScanSuccess,
-        (errorMessage) => { /* Abaikan error */ }
-      ).catch(err => {
-        showResultModal("Gagal memulai kamera. Mohon berikan izin akses kamera.", "error");
-      });
+  if (deviceId) {
+    constraints = { deviceId: { exact: deviceId } };
+  }
+
+  html5QrCode.start(
+    constraints,
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    onScanSuccess,
+    (errorMessage) => {
+      console.warn("QR Error:", errorMessage);
     }
+  ).catch(err => {
+    console.error("Start scanner gagal:", err);
+    // fallback: coba kamera default
+    html5QrCode.start(
+      { facingMode: "user" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      onScanSuccess
+    ).catch(err2 => {
+      showResultModal("Gagal memulai kamera. Coba gunakan HP atau cek izin kamera.", "error");
+    });
+  });
+}
+
 
     function initializeScanner() {
       Html5Qrcode.getCameras().then(devices => {
