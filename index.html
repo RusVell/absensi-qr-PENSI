@@ -13,13 +13,6 @@
       display: flex; justify-content: center; align-items: flex-start; padding-top: 5vh;
       background: linear-gradient(135deg, #fff5e1 0%, #ffc978 100%); position: relative; overflow: hidden;
     }
-    body::before {
-      content: ''; position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
-      width: 90%; max-width: 400px; height: 400px;
-      background-image: url('https://github.com/RusVell/absensi-qr-final/blob/main/Bandung.png?raw=true');
-      background-size: contain; background-repeat: no-repeat; background-position: center top;
-      opacity: 0.15; z-index: 0;
-    }
     .container {
       background: rgba(255, 255, 255, 0.95); border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       padding: 30px; width: 90%; max-width: 450px; text-align: center; box-sizing: border-box; z-index: 1; backdrop-filter: blur(5px);
@@ -27,11 +20,12 @@
     h1 { margin-top: 0; font-size: 26px; font-weight: 700; color: #d95e1e; }
     #reader {
       width: 100%;
-      height: 300px;
       margin: 20px auto;
       border: 2px solid #f0f0f0;
       border-radius: 12px;
       overflow: hidden;
+      /* === PERBAIKAN KUNCI #1: CSS AGAR KAMERA TAMPIL === */
+      aspect-ratio: 1 / 1;
     }
     select, label {
       display: block; width: 100%; padding: 12px; font-size: 16px; margin-bottom: 20px;
@@ -47,9 +41,7 @@
       width: 80%; max-width: 350px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border-top: 8px solid #f57c00;
     }
     .modal-content.success { border-color: #4CAF50; }
-    .modal-content.success #modal-message { color: #4CAF50; }
     .modal-content.error { border-color: #D32F2F; }
-    .modal-content.error #modal-message { color: #D32F2F; }
     #modal-message { font-size: 18px; font-weight: bold; margin: 0 0 25px 0; color: #333; }
     #modal-message .scanned-name { color: #d95e1e; display: block; font-size: 22px; margin-top: 8px; }
     #modal-actions { display: flex; justify-content: center; gap: 15px; }
@@ -58,9 +50,7 @@
       cursor: pointer; transition: all 0.2s; font-weight: bold;
     }
     .btn-primary { background: #f57c00; color: white; }
-    .btn-primary:hover { background: #d95e1e; }
     .btn-secondary { background: #e0e0e0; color: #333; }
-    .btn-secondary:hover { background: #bdbdbd; }
   </style>
 </head>
 <body>
@@ -87,13 +77,11 @@
 
   <script>
     const apiUrl = "https://script.google.com/macros/s/AKfycbyytoTQqULxsrOvaGiVCVHrC5kL828NGhtOCNWv_q64dMu8_CW0eVeUbPTEy-leARgP8A/exec";
-    
     const modal = document.getElementById('modal');
     const modalMessage = document.getElementById('modal-message');
     const modalActions = document.getElementById('modal-actions');
     const modalContent = modal.querySelector('.modal-content');
     const sesiDropdown = document.getElementById('sesi');
-    
     const html5QrCode = new Html5Qrcode("reader");
 
     function onScanSuccess(decodedText, decodedResult) {
@@ -106,14 +94,11 @@
       modalMessage.textContent = 'Memproses...';
       modalActions.innerHTML = '';
       modal.style.display = 'flex';
-
       fetch(apiUrl, {
         method: "POST",
         body: JSON.stringify(data),
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-      })
-      .then(res => res.json())
-      .then(res => {
+      }).then(res => res.json()).then(res => {
         if (data.mode === 'check') {
           if (res.code === 'CONFIRMATION_REQUIRED') {
             showConfirmationModal(data.nama, data.sesi);
@@ -123,8 +108,7 @@
         } else if (data.mode === 'save') {
           showResultModal(res.message, res.status);
         }
-      })
-      .catch(err => {
+      }).catch(err => {
         console.error("Fetch Error:", err);
         showResultModal("Terjadi kesalahan jaringan. Periksa koneksi dan coba lagi.", 'error');
       });
@@ -134,19 +118,14 @@
       modalMessage.innerHTML = `Absen untuk <span class="scanned-name">${nama}</span>?`;
       modalContent.className = 'modal-content';
       modalActions.innerHTML = '';
-
       const cancelBtn = document.createElement('button');
       cancelBtn.textContent = 'Batal';
       cancelBtn.className = 'btn-secondary';
       cancelBtn.onclick = hideModalAndResume;
-
       const saveBtn = document.createElement('button');
       saveBtn.textContent = 'Simpan';
       saveBtn.className = 'btn-primary';
-      saveBtn.onclick = () => {
-        sendToAPI({ mode: 'save', nama: nama, sesi: sesi });
-      };
-
+      saveBtn.onclick = () => { sendToAPI({ mode: 'save', nama: nama, sesi: sesi }); };
       modalActions.appendChild(cancelBtn);
       modalActions.appendChild(saveBtn);
     }
@@ -155,7 +134,6 @@
       modalMessage.innerHTML = message;
       modalContent.className = 'modal-content ' + status;
       modalActions.innerHTML = '';
-
       const continueBtn = document.createElement('button');
       continueBtn.textContent = 'Lanjut Scan';
       continueBtn.className = 'btn-primary';
@@ -167,9 +145,10 @@
       modal.style.display = 'none';
       try {
         const scannerState = html5QrCode.getState();
-        if (scannerState === 2 || scannerState === 3) { // 2=SCANNING, 3=PAUSED
+        if (scannerState === 2 || scannerState === 3) {
           await html5QrCode.stop();
         }
+        // === PERBAIKAN KUNCI #2: PANGGIL FUNGSI YANG BENAR UNTUK RESTART ===
         initializeScanner();
       } catch (err) {
         console.error("Gagal memulai ulang kamera:", err);
@@ -177,42 +156,22 @@
       }
     }
     
-   function startScanner(deviceId) {
-  let constraints = { facingMode: "environment" };
-
-  if (deviceId) {
-    constraints = { deviceId: { exact: deviceId } };
-  }
-
-  html5QrCode.start(
-    constraints,
-    { fps: 10, qrbox: { width: 250, height: 250 } },
-    onScanSuccess,
-    (errorMessage) => {
-      console.warn("QR Error:", errorMessage);
+    function startScanner(deviceId) {
+      const constraints = { facingMode: "environment" };
+      if (deviceId) {
+        constraints.deviceId = { exact: deviceId };
+      }
+      html5QrCode.start(constraints, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess)
+      .catch(err => {
+        showResultModal("Gagal memulai kamera. Mohon berikan izin akses kamera.", "error");
+      });
     }
-  ).catch(err => {
-    console.error("Start scanner gagal:", err);
-    // fallback: coba kamera default
-    html5QrCode.start(
-      { facingMode: "user" },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      onScanSuccess
-    ).catch(err2 => {
-      showResultModal("Gagal memulai kamera. Coba gunakan HP atau cek izin kamera.", "error");
-    });
-  });
-}
-
 
     function initializeScanner() {
       Html5Qrcode.getCameras().then(devices => {
-        console.log("Kamera yang terdeteksi:", devices);
         if (devices && devices.length) {
           let selectedCameraId;
-          const backCameras = devices.filter(device => 
-            device.label.toLowerCase().includes('back')
-          );
+          const backCameras = devices.filter(device => device.label.toLowerCase().includes('back'));
           if (backCameras.length > 0) {
             selectedCameraId = backCameras[0].id;
           } else {
@@ -220,11 +179,9 @@
           }
           startScanner(selectedCameraId);
         } else {
-          console.error("Tidak ada kamera yang ditemukan.");
           showResultModal("Tidak ada kamera yang terdeteksi di perangkat ini.", "error");
         }
       }).catch(err => {
-        console.error("Gagal mendapatkan daftar kamera:", err);
         startScanner(); 
       });
     }
