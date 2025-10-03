@@ -134,22 +134,30 @@
   }
 
   function startScanner(deviceId) {
-    let constraints;
-    if (deviceId) {
-      // ✅ perbaikan: jangan campur deviceId & facingMode
-      constraints = { video: { deviceId: { exact: deviceId } } };
-    } else {
-      constraints = { video: { facingMode: "environment" } };
-    }
-
-    html5QrCode.start(
-      constraints,
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      onScanSuccess
-    ).catch(err => {
-      showResultModal("Gagal memulai kamera. Mohon berikan izin akses kamera.", "error");
-    });
+  let constraints;
+  if (deviceId) {
+    constraints = { video: { deviceId: { exact: deviceId } } };
+  } else {
+    constraints = { video: { facingMode: "environment" } };
   }
+
+  html5QrCode.start(
+    constraints,
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    onScanSuccess
+  ).then(() => {
+    // ✅ Debug: cek apakah kamera bener-bener aktif
+    navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+      console.log("=== Kamera aktif ===");
+      stream.getTracks().forEach(track => {
+        console.log("Track:", track.kind, " | Active:", track.enabled, " | ReadyState:", track.readyState);
+      });
+    });
+  }).catch(err => {
+    showResultModal("Gagal memulai kamera. Mohon berikan izin akses kamera.", "error");
+    console.error("Camera start error:", err);
+  });
+}
 
   function initializeScanner() {
     Html5Qrcode.getCameras().then(devices => {
@@ -175,4 +183,5 @@
 </script>
 </body>
 </html>
+
 
